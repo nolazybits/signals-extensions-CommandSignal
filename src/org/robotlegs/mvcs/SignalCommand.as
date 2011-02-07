@@ -1,6 +1,6 @@
 package org.robotlegs.mvcs
 {
-    import org.robotlegs.core.ISignalCommandMap;
+import org.robotlegs.core.ISignalCommandMap;
 
     public class SignalCommand extends Command
     {

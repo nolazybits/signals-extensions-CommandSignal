@@ -2,7 +2,10 @@
 
 	<!-- Set up a prefix for all environment variables. -->
 	<property environment="env."/>
-	<fail unless="env.FLEX_HOME" message="FLEX_HOME needs to be defined as an environment variable or in the Ant build." />
+	<!-- load user properties to override defaults -->
+	<property file="user.properties"/>
+	<property name="FLEX_HOME" location="${env.FLEX_HOME}"/>
+	<fail unless="FLEX_HOME" message="FLEX_HOME needs to be defined as an environment variable or in the Ant build." />
 	<!-- Copy Flex SDK location from environment variable. This can be set manually instead. -->
 	<property name="FLEX_HOME" value="${env.FLEX_HOME}" />
 	<property file="build.properties"/>
@@ -55,6 +58,7 @@
             <arg value="-headless-server=true"/>
         </java>
         <!-- Execute TestRunner.swf as FlexUnit tests and publish reports -->
+		<mkdir dir="${report.loc}" />
         <flexunit swf="bin/TestRunner.swf" toDir="${report.loc}" haltonfailure="true" verbose="true" localTrusted="true"/>
         <!-- Generate readable JUnit-style reports -->
         <junitreport todir="${report.loc}">
