@@ -1,14 +1,17 @@
 package org.robotlegs.base
 {
-	import org.osflash.signals.ISignal;
-    import org.osflash.signals.ISignalOwner;
+    import avmplus.getQualifiedClassName;
+
+    import flash.utils.Dictionary;
+    import flash.utils.describeType;
+    import flash.utils.getDefinitionByName;
+
+    import org.osflash.signals.ISignal;
     import org.robotlegs.core.IInjector;
-	import org.robotlegs.core.ISignalCommandMap;
+    import org.robotlegs.core.ISignalCommandMap;
+    import org.robotlegs.vo.SignalDefinition;
 
-	import flash.utils.Dictionary;
-	import flash.utils.describeType;
-
-	public class SignalCommandMap implements ISignalCommandMap
+    public class SignalCommandMap implements ISignalCommandMap
     {
         protected var injector					:IInjector;
         protected var signalMap					:Dictionary;
@@ -116,58 +119,81 @@ package org.robotlegs.base
         public function mapSignalDefinitionCommand( signalDefinition : Class, commandClass : Class, oneshot : Boolean = false ) : void
         {
             verifyCommandClass( commandClass );
+            var o : SignalDefinition = signalDefinitionMap[signalDefinition] ||= new SignalDefinition();
             if ( hasSignalDefinitionCommand( signalDefinition, commandClass ) )
                 return;
-            var signalDefinitionObject:Object = signalDefinitionMap[signalDefinition] ||= { signalInstances : [], commandMap : new Dictionary( false ) };
             var callback:Function = function(a:* = null, b:* = null, c:* = null, d:* = null, e:* = null, f:* = null, g:* = null):void
             {
                 routeSignalDefinitionToCommand(signalDefinition, arguments, commandClass, oneshot );
             };
-            signalDefinitionObject.commandMap[commandClass] = callback;
-            bindSignalDefinitionCommand(signalDefinition);
+            o.mapCommand(commandClass, callback);
         }
 
-        public function mapSignalDefinitionInstance( signalDefinition : Class, signalInstance : ISignal, throwError : Boolean = true ) : void
+        public function mapSignalDefinitionInstance( signalInstance : ISignal, throwError : Boolean = true ) : void
         {
-            //	check if the instance of the signal has been registered already
-            if ( hasSignalDefinitionInstance( signalDefinition, signalInstance ) ) return;
-            signalDefinitionMap[signalDefinition].signalInstances.push( signalInstance );
+        //  get the definition of the signal
+            var signalDefinition : * = getDefinitionByName( getQualifiedClassName( signalInstance) ) as Class;
+        //  get the object or create a new one and push it
+            var o : SignalDefinition = signalDefinitionMap[signalDefinition] ||= new SignalDefinition();
+        //	check if the instance of the signal has been registered already
+            if ( hasSignalDefinitionInstance( signalInstance ) ) return;
+        //  add the signal to the array
+            o.mapInstance( signalInstance );
+        }
 
-            bindSignalDefinitionCommand(signalDefinition);
+        public function hasSignalDefinition( signalDefinition:Class ) : Boolean
+        {
+           return signalDefinitionMap[signalDefinition] != null;
         }
 
         public function hasSignalDefinitionCommand(signalDefinition:Class, commandClass:Class):Boolean
         {
-            var signalDefinitionObject:Object = signalDefinitionMap[signalDefinition];
-            if ( signalDefinitionObject == null ) return false;
-            var commandMap:Dictionary = signalDefinitionObject.commandMap as Dictionary;
-            if ( commandMap == null ) return false;
-            var callback:Function = commandMap[commandClass];
-            return callback != null;
+            if ( !hasSignalDefinition(signalDefinition) ) return false;
+            var o : SignalDefinition =  signalDefinitionMap[signalDefinition];
+            return o.hasCommand(commandClass);
         }
 
-        public function hasSignalDefinitionInstance (signalDefinition:Class, signalInstance:ISignal ) : Boolean
+        public function hasSignalDefinitionInstance ( signalInstance : ISignal ) : Boolean
         {
-            var signalDefinitionObject:Object = signalDefinitionMap[signalDefinition];
-            if ( signalDefinitionObject == null ) return false;
-            var signalInstances:Array = signalDefinitionObject.signalInstances as Array;
-            if ( signalInstances == null ) return false;
-            return signalInstances.indexOf(signalInstance) != -1;
+            var signalDefinition : * = getDefinitionByName( getQualifiedClassName( signalInstance) ) as Class;
+
+            if ( !hasSignalDefinition(signalDefinition) ) return false;
+            var o : SignalDefinition =  signalDefinitionMap[signalDefinition];
+            return o.hasInstance( signalInstance );
+        }
+
+        public function unmapSignalDefinition( signalDefinition : Class ) : void
+        {
+        //	check if the instance of the signal has been registered
+            if ( !hasSignalDefinition(signalDefinition) ) return;
+            var o : SignalDefinition = signalDefinitionMap[signalDefinition];
+            o.unmapInstances();
+            o.unmapCommands();
+        //  finally remove the definition
+            delete signalDefinitionMap[signalDefinition];
         }
 
         public function unmapSignalDefinitionCommand (signalDefinition:Class, commandClass:Class):void
         {
             if ( !hasSignalDefinitionCommand(signalDefinition, commandClass) )
                 return;
-            var signalDefinitionObject:Object = signalDefinitionMap[signalDefinition] as Object;
-            var command : Function = signalDefinitionObject.commandMap[commandClass] as Function;
-            for each( var signal : ISignal in signalDefinitionObject.signalInstances )
-            {
-                signal.remove( command );
-            }
-            var commandMap:Dictionary = signalDefinitionObject.commandMap;
-            delete commandMap[commandClass];
+            var o : SignalDefinition = signalDefinitionMap[signalDefinition];
+            o.unmapCommand( commandClass );
         }
+
+        public function unmapSignalDefinitionInstance( signalInstance : ISignal ) : void
+        {
+        //  get the definition of the signal
+            var signalDefinition : * = getDefinitionByName( getQualifiedClassName( signalInstance) ) as Class;
+        //	check if the instance of the signal has been registered
+            if ( hasSignalDefinitionInstance( signalInstance ) ) return;
+        //  remove any listener
+            signalInstance.removeAll();
+        //  and remove it from the array
+            var o : SignalDefinition = signalDefinitionMap[signalDefinition];
+            o.unmapInstance(signalInstance);
+        }
+
 
         protected function routeSignalDefinitionToCommand( signalDefinition : Class, valueObjects:Array, commandClass:Class, oneshot:Boolean ) : void
         {
@@ -179,18 +205,6 @@ package org.robotlegs.base
             if ( oneshot )
                 unmapSignalDefinitionCommand(signalDefinition, commandClass );
 
-        }
-
-        protected function bindSignalDefinitionCommand( signalDefinition : Class ) : void
-        {
-            for each ( var signal : ISignalOwner in signalDefinitionMap[signalDefinition].signalInstances )
-            {
-                signal.removeAll();
-                for each( var command : Function in  signalDefinitionMap[signalDefinition].commandMap )
-                {
-                    signal.add( command );
-                }
-            }
         }
     }
 }

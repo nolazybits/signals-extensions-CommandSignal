@@ -1,7 +1,7 @@
 package org.robotlegs.core
 {
-	import org.osflash.signals.ISignal;
-	
+    import org.osflash.signals.ISignal;
+
     public interface ISignalCommandMap
     {
         function mapSignal(signal:ISignal, commandClass:Class, oneShot:Boolean = false):void;
@@ -16,12 +16,14 @@ package org.robotlegs.core
 
         function mapSignalDefinitionCommand( signalDefinition : Class, commandClass : Class, oneshot : Boolean = false ) : void;
 
-        function mapSignalDefinitionInstance( signalDefinition : Class, signalInstance : ISignal, throwError : Boolean = true ) : void;
+        function mapSignalDefinitionInstance( signalInstance : ISignal, throwError : Boolean = true ) : void;
 
         function hasSignalDefinitionCommand(signalDefinition:Class, commandClass:Class) : Boolean;
 
-        function hasSignalDefinitionInstance (signalDefinition:Class, signalInstance:ISignal ) : Boolean;
+        function hasSignalDefinitionInstance ( signalInstance:ISignal ) : Boolean;
 
         function unmapSignalDefinitionCommand (signalDefinition:Class, commandClass:Class) : void;
+
+        function unmapSignalDefinitionInstance ( signalInstance : ISignal ) : void;
     }
 }
