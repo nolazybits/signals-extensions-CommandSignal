@@ -1,10 +1,10 @@
 package org.robotlegs.base
 {
-    import avmplus.getQualifiedClassName;
-
     import flash.utils.Dictionary;
     import flash.utils.describeType;
     import flash.utils.getDefinitionByName;
+
+    import flash.utils.getQualifiedClassName;
 
     import org.osflash.signals.ISignal;
     import org.robotlegs.core.IInjector;

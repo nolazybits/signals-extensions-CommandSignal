@@ -7,16 +7,18 @@ package org.robotlegs.vo
 {
     import flash.utils.Dictionary;
 
+    import flash.utils.getQualifiedClassName;
+
     import org.osflash.signals.ISignal;
 
     public class SignalDefinition
     {
-        private var __signalInstances   : Array;
+        private var __signalInstances   : Dictionary;
         private var __commandMap        : Dictionary;
 
         public function SignalDefinition ()
         {
-            __signalInstances = [];
+            __signalInstances = new Dictionary(false);
             __commandMap = new Dictionary(false);
         }
     // ************************************************************************
@@ -24,7 +26,8 @@ package org.robotlegs.vo
     // ************************************************************************
         public function hasInstance( signalInstance : ISignal ) : Boolean
         {
-            return __signalInstances.indexOf( signalInstance ) != -1;
+            var className : String = getQualifiedClassName( signalInstance );
+            return __signalInstances[className] != null;
         }
 
         public function hasCommand( commandClass : Class ) : Boolean
@@ -40,7 +43,8 @@ package org.robotlegs.vo
 
         public function mapInstance( signalInstance : ISignal ) : void
         {
-            __signalInstances.push(signalInstance);
+            var className : String = getQualifiedClassName( signalInstance );
+            __signalInstances[className] = signalInstance;
             _bindSignalDefinitionCommand(signalInstance);
         }
 
@@ -67,21 +71,22 @@ package org.robotlegs.vo
 
         public function unmapInstance( signalInstance : ISignal ) : void
         {
-            var index : int = __signalInstances.indexOf( signalInstance);
-            if (index == -1) return;
+            if ( !hasInstance(signalInstance) ) return;
+            var className : String = getQualifiedClassName(signalInstance);
             signalInstance.removeAll();
-            __signalInstances.splice(index, 1);
+            delete __signalInstances[className];
         }
 
         public function unmapInstances() : void
         {
         //  if it exists get loop in all the signals, removing all the listeners
-            var signalInstance : ISignal;
-            while ( __signalInstances.length > 0 )
+            var signalInstance  : ISignal;
+            var className       : String;
+            for ( className in __signalInstances )
             {
-                signalInstance = __signalInstances[0] as ISignal;
+                signalInstance = __signalInstances[className];
                 signalInstance.removeAll();
-                __signalInstances.splice(0, 1);
+                delete __signalInstances[className];
             }
         }
 
@@ -96,7 +101,14 @@ package org.robotlegs.vo
             }
             return cloned;
         }
-        public function get signalInstances() : Array { return __signalInstances.concat(); }
+        public function get signalInstances() : Array
+        {
+            var signalInstance : ISignal;
+            var tmp : Array = [];
+            for each( signalInstance in __signalInstances)
+                tmp.push(signalInstance);
+            return tmp;
+        }
 
     // ************************************************************************
     // * PROTECTED FUNCTIONS
