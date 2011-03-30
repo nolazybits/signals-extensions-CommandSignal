@@ -7,7 +7,8 @@ package org.robotlegs.base
     import org.robotlegs.adapters.SwiftSuspendersInjector;
     import org.robotlegs.core.IInjector;
     import org.robotlegs.core.ISignalCommandMap;
-    import org.robotlegs.test.support.*;
+    import org.robotlegs.test.support.*; 
+	import org.swiftsuspenders.InjectorError;
 
     public class SignalCommandMapTests
     {
@@ -213,6 +214,23 @@ package org.robotlegs.base
 			signal.dispatch(i,prop);
 
 			assertTrue(prop.wasExecuted);
-		}
+		} 
+		
+		[Test(expects="org.swiftsuspenders.InjectorError")]
+		public function signal_values_no_longer_persist_from_one_to_the_next():void
+		{
+			var propOne:TestCommandProperty = new TestCommandProperty();
+            var propTwo:TestCommandProperty2 = new TestCommandProperty2();  
+            signalCommandMap.mapSignal(onePropSignal, TestOnePropertyCommand);
+
+			var secondPropSignal:TestCommandProperty2Signal = new TestCommandProperty2Signal();
+            signalCommandMap.mapSignal(secondPropSignal, TestTwoPropertyConstructorCommand);
+
+            onePropSignal.dispatch(propOne);
+			secondPropSignal.dispatch(propTwo);
+			
+            assertTrue(propOne.wasExecuted && propTwo.wasExecuted); 
+        }
+		
     }
 }
