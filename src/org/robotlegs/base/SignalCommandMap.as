@@ -129,7 +129,10 @@ package org.robotlegs.base
             verifyCommandClass( commandClass );
             var o : SignalDefinition = signalDefinitionMap[signalDefinition] ||= new SignalDefinition();
             if ( hasSignalDefinitionCommand( signalDefinition, commandClass ) )
+            {
                 return;
+            }
+
             var callback:Function = function(a:* = null, b:* = null, c:* = null, d:* = null, e:* = null, f:* = null, g:* = null):void
             {
                 routeSignalDefinitionToCommand(signalDefinition, arguments, commandClass, oneshot );
@@ -208,7 +211,9 @@ package org.robotlegs.base
             var signalInstances : Array = signalDefinitionMap[signalDefinition].signalInstances as Array;
             for each ( var signal : ISignal in signalInstances )
             {
-                createCommandInstance(signal.valueClasses, valueObjects, commandClass).execute();
+                mapSignalValues( signal.valueClasses, valueObjects );
+                createCommandInstance(commandClass).execute();
+                unmapSignalValues( signal.valueClasses, valueObjects );
             }
             if ( oneshot )
                 unmapSignalDefinitionCommand(signalDefinition, commandClass );
